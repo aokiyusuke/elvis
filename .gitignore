@@ -12,3 +12,14 @@ fmt
 ref
 elvis*.rpm
 elvis*.tar.gz
+guignome/*
+*.aps
+x64/
+.vs/
+*.vcxproj.filters
+*.vcxproj.user
+Release/*
+Debug/*
+x64\Release/*
+x64\Debug/*
+trace.log
