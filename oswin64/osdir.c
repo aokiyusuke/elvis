@@ -280,7 +280,7 @@ char *dirfirst(char *wildexpr, ELVBOOL ispartial)
 	if (hfd != INVALID_HANDLE_VALUE) {
 		strcpy(found, dirpath(finddir, FileData.cFileName));
 	} else {
-		found[0] = '\0';
+		strcpy(found, findwild);
 	}
 #else
 	FileData.name[0] = '\0';
