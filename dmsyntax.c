@@ -138,7 +138,7 @@ static spell_t *scankeyword(refp, colplusone, indent)
 {
 	spell_t *node;
 	spell_t *nnode = NULL;	/* node for normal colplusone anchor */
-	CHAR    *rrefp;		/* reference for normal colplusone anchor */
+	CHAR    *rrefp = NULL;		/* reference for normal colplusone anchor */
 	int	anchor;
 
 	/* look it up, being careful about case sensitivity */

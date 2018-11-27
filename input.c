@@ -1000,15 +1000,29 @@ static RESULT parse(key, info)
 	{
 		if (ii->cmd == INP_DIG1)
 		{
-			ii->arg = key;
-			ii->cmd = INP_DIG2;
-			windefault->state->mapflags |= MAP_DISABLE;
-			return RESULT_MORE;
+                    extern int isleadbyte(unsigned char);
+                    if (isleadbyte(key)) {
+                        // key is the lead byte of a multibyte character sequence; dont do digraph things because it is considred to be already done by os
+                        ii->arg = key;
+                        ii->cmd = INP_DIG2;
+                        windefault->state->mapflags |= MAP_DISABLE;
+                        return RESULT_COMPLETE;
+                    } else {
+                        ii->arg = key;
+                        ii->cmd = INP_DIG2;
+                        windefault->state->mapflags |= MAP_DISABLE;
+                        return RESULT_MORE;
+                    }
 		}
 		else
 		{
-			ii->arg = digraph(ii->arg, key);
-			return RESULT_COMPLETE;
+                    if (isleadbyte(ii->prev)) {
+                        // key is the following byte of a multibyte character sequence
+                        ii->arg = key;
+                    } else {
+                        ii->arg = digraph(ii->arg, key);
+                    }
+                    return RESULT_COMPLETE;
 		}
 	}
 	else if (ii->cmd == INP_QUOTE)

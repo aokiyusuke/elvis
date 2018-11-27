@@ -913,6 +913,12 @@ void term()
 
 	/* Check for any memory leaks */
 	safeterm();
+
+#ifdef OSINIT
+	/* initialize the OS */
+	extern void osterm();
+	osterm();
+#endif
 }
 
 int main(argc, argv)

@@ -120,7 +120,7 @@ static char *termcap[] =
 :ue=\033[m:up=\033[A:us=\033[4m:ti=\033[m:te=\033[m:\
 :ac=q\304x\263m\300v\301j\331t\303n\305u\264l\332w\302k\277:",
 
-"pcbios",
+"pcbiosold",
 ":al=\033[L:dl=\033[M:AL=\033[%dL:DL=\033[%dM:am:bs:ce=\033[K:cl=\033[2J:\
 :cm=\033[%i%d;%dH:co#80:\
 :k1=#;:k2=#<:k3=#=:k4=#>:k5=#?:k6=#@:k7=#A:k8=#B:k9=#C:k0=#D:F1=#W:F2=#X:\
@@ -137,6 +137,7 @@ static char *termcap[] =
 #ifdef TERM_CONSOLE
 "console",
 "cygwin",
+"pcbios",
 ":al=\033[L:dl=\033[M:AL=\033[%dL:DL=\033[%dM:am:xn:bs:ce=\033[K:cl=\033[2J:\
 :cm=\033[%i%d;%dH:co#80:\
 :k1=#;:k2=#<:k3=#=:k4=#>:k5=#?:k6=#@:k7=#A:k8=#B:k9=#C:k0=#D:F1=#W:F2=#X:\

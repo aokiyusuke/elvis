@@ -1,4 +1,4 @@
-/* oswin32/osdir.c */
+/* oswin64/osdir.c */
 
 /* This file contains functions which deal with filenames.  The structure of
  * this file is a little unusual because some of the support programs also
@@ -34,6 +34,7 @@
 # undef elvalpha
 # define elvalpha(c)	((unsigned)(((c) & 0xffdf) - 'A') < 26)
 #endif /* JUST_DIRFIRST */
+
 
 #ifndef JUST_DIRPATH
 
@@ -166,9 +167,15 @@ static char			finddir[MAX_PATH];
 static char			findwild[MAX_PATH];
 static char			findbracket[MAX_PATH];
 static char			*findbase;
-static char			found[MAX_PATH];
+static char			found[MAX_PATH] = { 0, };
+
 #ifdef WIN32
+#ifdef NO_CYGWIN
+static WIN32_FIND_DATAA FileData;
+static HANDLE hfd;
+#else
 static struct _finddata_t	FileData;
+#endif
 #else 
 static struct _find_t		FileData;
 #endif
@@ -268,6 +275,14 @@ char *dirfirst(char *wildexpr, ELVBOOL ispartial)
 		findbase = findbracket;
 
 	/* if no match, then return the original wildexpr unchanged */
+#ifdef NO_CYGWIN
+	hfd = FindFirstFileA(findwild, &FileData);
+	if (hfd != INVALID_HANDLE_VALUE) {
+		strcpy(found, dirpath(finddir, FileData.cFileName));
+	} else {
+		found[0] = '\0';
+	}
+#else
 	FileData.name[0] = '\0';
 	hSearch = _findfirst(findwild, &FileData);
 	while (hSearch >= 0 && (*FileData.name == '.' || !dirwildcmp(FileData.name, findbase)))
@@ -286,6 +301,7 @@ char *dirfirst(char *wildexpr, ELVBOOL ispartial)
 
 	/* combine the directory name with the found file's name */
 	strcpy(found, dirpath(finddir, FileData.name));
+#endif
 
 	return found;
 }
@@ -300,6 +316,15 @@ char *dirnext(void)
 		return NULL;
 
 	/* if there is no match, then return NULL */
+#ifdef NO_CYGWIN
+	if (FindNextFileA(hfd, &FileData)) {
+		strcpy(found, dirpath(finddir, FileData.cFileName));
+		return found;
+	} else {
+		found[0] = '\0';
+		return NULL;
+	}
+#else
 	do
 	{
 		if (_findnext(hSearch, &FileData) < 0)
@@ -312,8 +337,8 @@ char *dirnext(void)
 
 	/* combine the directory name with the found file's name */
 	strcpy(found, dirpath(finddir, FileData.name));
-
 	return found;
+#endif
 }
 
 #ifndef JUST_DIRFIRST
@@ -523,7 +548,7 @@ char *dirtime(filename)
 	else /* get timstamp of a file */
 	{
 		/* Get file info.  If that fails, return "" */
-		handle = FindFirstFile(filename, &info);
+		handle = FindFirstFileA(filename, &info);
 		if (handle == INVALID_HANDLE_VALUE)
 			return "";
 		FindClose(handle);
@@ -581,6 +606,7 @@ void osinit(argv0)
 	DWORD	dw, dw2;
 	FILETIME when;
 	struct mtab_s swapper;
+#ifndef NO_CYGWIN
 #if NEW_CYGWIN
 	ELVBOOL oldhide;
 	CHAR	ch, line[200];
@@ -588,6 +614,7 @@ void osinit(argv0)
 	char	name[200];
 	char	value[200];
 	HKEY	hCygnus, hMounts, hKey;
+#endif
 #endif
 
        /* if argv0 isn't a pathname, then try the Windows API call
@@ -599,7 +626,7 @@ void osinit(argv0)
 	 */
 	if (!strchr(argv0, '\\') && _access("elvis.exe", 0) != 0)
 	{
-	       if(GetModuleFileName(NULL, modulep, sizeof(modulep))) 
+	       if(GetModuleFileNameA(NULL, modulep, sizeof(modulep))) 
 		{
 		       argv0 = modulep;
 		} 
@@ -657,6 +684,7 @@ void osinit(argv0)
 
 	/* Read the mounts for the latest Cygwin version */
 	nmtabs = 0;
+#ifndef NO_CYGWIN
 #if NEW_CYGWIN
 
 	oldhide = msghide(TRUE);
@@ -760,6 +788,15 @@ void osinit(argv0)
 				mtab[i] = mtab[j];
 				mtab[j] = swapper;
 			}
+#endif
+
+       extern void v_init();
+       v_init();
+}
+
+void osterm() {
+       extern void v_term();
+       v_term();
 }
 
 #endif /* !JUST_DIRPATH */

@@ -738,7 +738,7 @@ static void init(void)
 {
 	setbuf(stdout, NULL);
 #ifdef OSINIT
-	osinit();
+	osinit(NULL);
 #endif
 	optglobinit();
 }

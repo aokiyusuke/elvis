@@ -2207,7 +2207,7 @@ static int ttyprgclose()
 
 #ifdef FEATURE_MISC
 	/* some versions of tcaphelp.c set the title */
-	if (gui->retitle && (win = winofgw((GUIWIN *)current)) != NULL)
+	if (gui->retitle && current && (win = winofgw((GUIWIN *)current)) != NULL)
 	{
 		title = o_filename(markbuffer(win->cursor)); 
 		if (!title)

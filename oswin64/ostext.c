@@ -1,4 +1,4 @@
-/* oswin32/ostext.c */
+/* oswin64/ostext.c */
 
 #include "elvis.h"
 #include <sys/types.h>

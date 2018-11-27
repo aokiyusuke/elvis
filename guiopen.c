@@ -18,7 +18,6 @@ char id_guiopen[] = "$Id: guiopen.c,v 2.30 2003/10/17 17:41:23 steve Exp $";
  * of an unknown type.
  */
 
-
 #if USE_PROTOTYPES
 static ELVBOOL creategw(char *name, char *firstcmd);
 static int init(int argc, char **argv);
@@ -163,7 +162,7 @@ static void scriptloop()
 	script = bufalloc(NULL, 0, ElvTrue);
 
 	/* read from stdin, into a buffer */
-	while ((n = read(0, inbuf, sizeof(inbuf))) > 0)
+	while ((n = _read(0, inbuf, sizeof(inbuf))) > 0)
 	{
 		(void)marktmp(end, script, o_bufchars(script));
 		bufreplace(&end, &end, toCHAR(inbuf), n);

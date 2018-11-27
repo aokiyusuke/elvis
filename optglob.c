@@ -136,7 +136,13 @@ static OPTDESC ogdesc[] =
 	/* added these for the sake of backward compatibility : */
 	{"more", "mo",		NULL,		NULL		},
 	{"hardtabs", "ht",	optnstring,	optisnumber,	"1:1000"},
-	{"redraw", "red",	NULL,		NULL		}
+	{"redraw", "red",	NULL,		NULL		},
+
+	{"compiler", "cc",	optsstring,	optisstring }, // elvis 1.7
+	{"make", "make", optsstring, optisstring },    // elvis 1.7
+
+	{"prescut", "prescut", NULL,	NULL }, // elvis 1.7 + aoki
+	{"softtab", "softtab", NULL,	NULL }, // elvis 1.7 + aoki
 };
 
 

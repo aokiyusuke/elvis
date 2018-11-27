@@ -931,7 +931,7 @@ void maketag(scope, name, lnum, seek, number, kind, inside)
 	TAG	tag;	/* structure for storing tag info */
 	char	buf[300];
 	char	lnbuf[20];
-	TAG	*scan, *ref, *next;
+	TAG	*scan, *ref, *next = NULL;
 
 
 	/* if tag has a scope that we don't care about, ignore it */

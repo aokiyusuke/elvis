@@ -18,7 +18,13 @@ RESULT m_left(win, vinf)
 	VIINFO	*vinf;	/* information about the command */
 {
 	MARK	tmp;
-	DEFAULT(1);
+	//DEFAULT(1);
+    CHAR	*cp;
+    static MARKBUF	tmpmarkbuf;
+    (void)scanalloc(&cp, marktmp(tmpmarkbuf, markbuffer(win->cursor), markoffset(win->cursor) >= 2 ? markoffset(win->cursor) - 2 : 0));
+    extern int isleadbyte(unsigned char);
+    DEFAULT(cp == NULL ? 1 : isleadbyte(*cp) ? 2 : 1);
+    scanfree(&cp);
 
 	/* find the start of this line */
 	tmp = dispmove(win, 0L, 0L);
@@ -51,7 +57,13 @@ RESULT m_right(win, vinf)
 	VIINFO	*vinf;	/* information about the command */
 {
 	MARK	tmp;
-	DEFAULT(1);
+    //DEFAULT(1);
+    CHAR	*cp;
+    static MARKBUF	tmpmarkbuf;
+    (void)scanalloc(&cp, marktmp(tmpmarkbuf, markbuffer(win->cursor), markoffset(win->cursor)));
+    extern int isleadbyte(unsigned char);
+    DEFAULT(cp == NULL ? 1 : isleadbyte(*cp) ? 2 : 1);
+    scanfree(&cp);
 
 	/* find the end of this line.  This is complicated by the fact that
 	 * when used as the target of an operator, the l command can move
@@ -90,7 +102,10 @@ RESULT m_updown(win, vinf)
 	VIINFO	*vinf;	/* information about the command */
 {
 	MARK	tmp = NULL;
-	DEFAULT(1);
+    MARK    tmp2 = NULL;
+    CHAR	*cp;
+    static MARKBUF	tmpmarkbuf;
+    DEFAULT(1);
 
 	/* do the move */
 	switch (vinf->command)
@@ -112,7 +127,7 @@ RESULT m_updown(win, vinf)
 	  case '-':
 	  case 'k':
 		tmp = dispmove(win, -vinf->count, win->wantcol);
-		break;
+        break;
 
 #ifndef NDEBUG
 	  default:
@@ -127,6 +142,13 @@ RESULT m_updown(win, vinf)
 	{
 		return RESULT_ERROR;
 	}
+
+    (void)scanalloc(&cp, marktmp(tmpmarkbuf, markbuffer(tmp), markoffset(tmp) >= 2 ? markoffset(tmp) - 2 : 0));
+    extern int isleadbyte(unsigned char);
+    if (cp != NULL && !isleadbyte(cp[0]) && isleadbyte(cp[1])) {
+        marksetoffset(tmp, markoffset(tmp) - 1);
+    }
+    scanfree(&cp);
 
 	/* It's good! */
 	marksetoffset(win->state->cursor, markoffset(tmp));

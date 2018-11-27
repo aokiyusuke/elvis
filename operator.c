@@ -123,6 +123,7 @@ static RESULT	filterenter(win)
 	 * the newline character at the end of the line.
 	 */
 	cmd = NULL;
+	subend = NULL;
 	for (i = markoffset(win->state->bottom) - markoffset(win->state->top);
 	     cp != NULL && i > 1;
 	     scannext(&cp), i--)

@@ -1,4 +1,4 @@
-/* oswin32/osprg.c */
+/* oswin64/osprg.c */
 
 
 #include <windows.h>
@@ -11,7 +11,83 @@ char id_osprg[] = "$Id: osprg.c,v 2.19 2003/10/17 17:41:23 steve Exp $";
 #endif
 
 
-#undef DEBUGGING
+static CONSOLE_SCREEN_BUFFER_INFO csbi = {0, };
+static CONSOLE_SCREEN_BUFFER_INFO originalcsbi = {0, };
+static CONSOLE_SCREEN_BUFFER_INFO savedcsbi = {0, };
+// derived from elvis 1.8a (win64 porting of elvis 1.8 by aoki)
+static int vmode = 0;
+static int screen = 0;
+static char attr[2][8] = {
+    /*	:se:	:so:	:VB:	:ul:	:as:	popup	visible	quit	*/
+    //{	0x1f,	0x1d,	0x1e,	0x1a,	0x1c,	0x2f,	0x3f,	0x07},	/* color */
+    //{	0x1f,	0x1e,	0x1e,	0x1a,	0x1c,	0x2f,	0x3f,	0x07},	/* color */
+    {	0x3f,	0x3e,	0x3e,	0x3a,	0x3c,	0x2f,	0x6f,	0x07},	/* color */
+    {	0x07,	0x70,	0x0f,	0x01,	0x0f,	0x70,	0x70,	0x07},	/* mono */
+};
+
+
+void v_cl() {
+    DWORD nfill;
+    nfill = csbi.dwSize.X * csbi.dwSize.Y;
+    csbi.dwCursorPosition.X = csbi.dwCursorPosition.Y = 0;
+    FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', nfill, csbi.dwCursorPosition, &nfill);
+    FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), attr[screen][vmode], nfill, csbi.dwCursorPosition, &nfill);
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), csbi.dwCursorPosition);
+}
+
+void v_cd() {
+    DWORD nfill;
+    COORD coord;
+    nfill = csbi.dwSize.X - csbi.dwCursorPosition.X + (csbi.dwSize.Y - csbi.dwCursorPosition.Y) * csbi.dwSize.X;
+    coord = csbi.dwCursorPosition;
+    coord.X++;
+    FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', nfill, coord, &nfill);
+    FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), attr[screen][vmode], nfill, csbi.dwCursorPosition, &nfill);
+}
+
+void v_init() {
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &originalcsbi);
+    csbi = originalcsbi;
+    csbi.dwSize.X = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    csbi.dwSize.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    return;
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), csbi.dwSize);
+    //v_cl();
+}
+
+void v_term() {
+    DWORD nfill;
+    nfill = originalcsbi.dwSize.X * originalcsbi.dwSize.Y;
+    originalcsbi.dwCursorPosition.X = originalcsbi.dwCursorPosition.Y = 0;
+    FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', nfill, originalcsbi.dwCursorPosition, &nfill);
+    FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), originalcsbi.wAttributes, nfill, originalcsbi.dwCursorPosition, &nfill);
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), originalcsbi.dwCursorPosition);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), originalcsbi.wAttributes);
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), originalcsbi.dwSize);
+}
+
+void v_suspend() {
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &savedcsbi);
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), originalcsbi.dwSize);
+    //v_cd();
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), attr[screen][vmode]);
+}
+
+void v_resume() {
+    DWORD nfill;
+    COORD pos;
+    nfill = savedcsbi.dwSize.X * savedcsbi.dwSize.Y;
+    pos.X = pos.Y = 0;
+    FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', nfill, pos, &nfill);
+    FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), savedcsbi.wAttributes, nfill, pos, &nfill);
+    //pos.X = 0;
+    //pos.Y = savedcsbi.dwSize.Y - 2;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), savedcsbi.dwSize);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), savedcsbi.wAttributes);
+}
+
+//#undef DEBUGGING
 
 
 #define TMPDIR	(o_directory ? tochar8(o_directory) : ".")
@@ -24,7 +100,7 @@ static HANDLE	readfd;		/* handle used for reading program's stdout */
 static HANDLE	pid;		/* process ID of program */
 static HANDLE	tid;		/* thread ID of program */
 static SECURITY_ATTRIBUTES inherit = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
-static STARTUPINFO start = {sizeof(STARTUPINFO)};
+static STARTUPINFOA start = {sizeof(STARTUPINFO)};
 static UINT	unique;
 static char	pipefname[MAX_PATH];	/* name of pipe's temp file */
 static BOOL	supports_pipes;	/* can program write to a pipe? */
@@ -707,7 +783,7 @@ static BOOL classifyprog(prog)
 	char	*prog;	/* a program to check, possibly followed by args */
 {
 	char	*freethis = NULL;
-	char	*name;
+	char	*name = NULL;
 	char	*cp;
 	long	exetype;
 
@@ -755,7 +831,7 @@ static BOOL classifyprog(prog)
 TRACE(fprintf(tracelog, "classifyprog(\"%s\"), name=\"%s\"\n", prog, name));
 
 	/* check the file's type */
-	if (GetBinaryType(name, &exetype))
+	if (GetBinaryTypeA(name, &exetype))
 	{
 TRACE(fprintf(tracelog, "GetBinaryType() succeeded, exetype=%d\n", exetype);)
 		if (exetype != SCS_32BIT_BINARY && exetype != SCS_WOW_BINARY)
@@ -809,8 +885,8 @@ TRACE(fprintf(tracelog, "MaybeCreatePipe() using pipe\n"));
 			unique = 1;
 		else
 			unique++;
-		GetTempFileName(TMPDIR, "elv", unique, pipefname);
-		*w = CreateFile(pipefname, GENERIC_READ|GENERIC_WRITE,
+		GetTempFileNameA(TMPDIR, "elv", unique, pipefname);
+		*w = CreateFileA(pipefname, GENERIC_READ|GENERIC_WRITE,
 				FILE_SHARE_READ|FILE_SHARE_WRITE, &inherit,
 				CREATE_NEW,
 				FILE_ATTRIBUTE_NORMAL|FILE_FLAG_SEQUENTIAL_SCAN,
@@ -830,7 +906,7 @@ TRACE(fprintf(tracelog, "MaybeCreatePipe() using pipe\n"));
 		ElvisError("DuplicateHandle[1]");
 		CloseHandle(*w);
 		*w = INVALID_HANDLE_VALUE;
-		(void)DeleteFile(pipefname);
+		(void)DeleteFileA(pipefname);
 		*pipefname = '\0';
 		return FALSE;
 	}
@@ -898,6 +974,7 @@ TRACE(fprintf(tracelog, "writefd = 0x%lx\n", (long)writefd);)
 	}
 
 	/* append the user's command to the command line */
+	buildCHAR(&cmdline, (ElvisCHAR)'"');
 	for (; *cmd; cmd++)
 	{
 		if (cmd[0] == '$' && cmd[1] == '1')
@@ -911,6 +988,7 @@ TRACE(fprintf(tracelog, "writefd = 0x%lx\n", (long)writefd);)
 			buildCHAR(&cmdline, (ElvisCHAR)*cmd);
 		}
 	}
+	buildCHAR(&cmdline, (ElvisCHAR)'"');
 
 #ifdef GUI_WIN32
 	/* For the "win32" gui, any subprocesses will normally start out
@@ -926,16 +1004,15 @@ TRACE(fprintf(tracelog, "writefd = 0x%lx\n", (long)writefd);)
 	 * that fails (probably because the command is built into the
 	 * shell) then try the same command with the shell.
 	 */
-	result = (CreateProcess(NULL, tochar8(cmdline + shlen),
-			NULL, NULL, TRUE,
-			ElvisDETACHED | NORMAL_PRIORITY_CLASS,
-			NULL, NULL, &start, &proc)
-		|| (shlen > 0 && CreateProcess(NULL, tochar8(cmdline),
+	result = (CreateProcessA(NULL, tochar8(cmdline + shlen),
+		NULL, NULL, TRUE,
+		ElvisDETACHED | NORMAL_PRIORITY_CLASS,
+		NULL, NULL, &start, &proc)
+		|| (shlen > 0 && CreateProcessA(NULL, tochar8(cmdline),
 			NULL, NULL, TRUE,
 			ElvisDETACHED | NORMAL_PRIORITY_CLASS,
 			NULL, NULL, &start, &proc)));
 TRACE(fprintf(tracelog, "CreateProcess(\"%s\") returned %s\n", cmdline, result?"TRUE":"FALSE");)
-
 	/* remember info about the process */
 	if (result)
 	{
@@ -1001,7 +1078,7 @@ TRACE(fprintf(tracelog, "supports_detach=%s, supports_pipes=%s\n", supports_deta
 		 */
 
 		/* save the command; we'll need it in prggo()*/
-		command = strdup(cmd);
+		command = _strdup(cmd);
 
 		/* create a temporary file for feeding the program's stdin */
 		do
@@ -1012,8 +1089,8 @@ TRACE(fprintf(tracelog, "supports_detach=%s, supports_pipes=%s\n", supports_deta
 				unique = 1;
 			else
 				unique++;
-			GetTempFileName(TMPDIR, "elv", unique, tempfname);
-			writefd = CreateFile(tempfname, GENERIC_READ|GENERIC_WRITE,
+			GetTempFileNameA(TMPDIR, "elv", unique, tempfname);
+			writefd = CreateFileA(tempfname, GENERIC_READ|GENERIC_WRITE,
 					FILE_SHARE_READ, &inherit, CREATE_NEW,
 					FILE_ATTRIBUTE_NORMAL|FILE_FLAG_SEQUENTIAL_SCAN,
 					INVALID_HANDLE_VALUE);
@@ -1057,7 +1134,7 @@ TRACE(fprintf(tracelog, "%s(%d) piper=0x%lx, pipew=0x%lx\n", __FILE__, __LINE__,
 			CloseHandle(piper);
 			CloseHandle(pipew);
 			if (*pipefname)
-				(void)DeleteFile(pipefname);
+				(void)DeleteFileA(pipefname);
 			return ElvFalse;
 		}
 TRACE(fprintf(tracelog, "%s(%d) piper=0x%lx (was 0x%lx)\n", __FILE__, __LINE__, (long)handle, (long)piper);)
@@ -1072,7 +1149,7 @@ TRACE(fprintf(tracelog, "%s(%d) piper=0x%lx (was 0x%lx)\n", __FILE__, __LINE__, 
 			CloseHandle(piper);
 			CloseHandle(pipew);
 			if (*pipefname)
-				(void)DeleteFile(pipefname);
+				(void)DeleteFileA(pipefname);
 			return ElvFalse;
 		}
 
@@ -1088,6 +1165,7 @@ TRACE(fprintf(tracelog, "%s(%d) piper=0x%lx (was 0x%lx)\n", __FILE__, __LINE__, 
 			return ElvFalse;
 		}
 	}
+	v_suspend();
 
 	/* if we get here, we must have succeeded */
 	return ElvTrue;
@@ -1156,7 +1234,7 @@ TRACE(fprintf(tracelog, "prggo(), readfd=%x, writefd=%x\n", readfd, writefd));
 					CloseHandle(piper);
 					CloseHandle(pipew);
 					if (*pipefname)
-						(void)DeleteFile(pipefname);
+						(void)DeleteFileA(pipefname);
 					return ElvFalse;
 				}
 	TRACE(fprintf(tracelog, "%s(%d) piper=0x%lx (was 0x%lx)\n", __FILE__, __LINE__, (long)handle, (long)piper);)
@@ -1291,14 +1369,15 @@ TRACE(fprintf(tracelog, "About to wait for program to die, pid=%d\n", pid); fflu
 	/* delete the temp files, if there were any */
 	if (*tempfname)
 	{
-		(void)DeleteFile(tempfname);
+		(void)DeleteFileA(tempfname);
 		*tempfname = '\0';
 	}
 	if (*pipefname)
 	{
-		(void)DeleteFile(pipefname);
+		(void)DeleteFileA(pipefname);
 		*pipefname = '\0';
 	}
+	v_resume();
 
 	return status;
 }

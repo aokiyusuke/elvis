@@ -1,4 +1,4 @@
-/* oswin32/osblock.c */
+/* oswin64/osblock.c */
 
 #include <sys/types.h>
 #include <dos.h>
@@ -51,12 +51,12 @@ ELVBOOL blkopen(ELVBOOL force, BLK *buf)
 		if (sesname[len - 1] != '\\')
 			sesname[len++] = '\\';
 		strcpy(sesname + len, "elvis.tmp");
-	} while ((i = open(sesname, O_RDWR|O_CREAT, 0666)) < 0 && *sespath++);
+	} while ((i = _open(sesname, O_RDWR|O_CREAT, 0666)) < 0 && *sespath++);
 	if (i < 0)
 	{
 		msg(MSG_FATAL, "set SESSIONPATH to a writable directory");
 	}
-	close(i);
+	_close(i);
 	remove(sesname);
 
 	/* If no session file was explicitly requested, use the default */

@@ -4,7 +4,7 @@
  * This is the name of the OS, as reported by ":set os?"
  */
 #ifndef OSNAME
-# define OSNAME	"win32"
+# define OSNAME	"win64"
 #endif
 
 /*=============================================================================
@@ -35,7 +35,7 @@
 # define OSCCPRG	"cl /c ($1?$1:$2)"
 #endif
 #ifndef OSMAKEPRG
-# define OSMAKEPRG	"make"
+# define OSMAKEPRG	"nmake"
 #endif
 
 /*=============================================================================
@@ -89,3 +89,7 @@
  * This determines whether filename completion should ignore case differences.
  */
 #define FILES_IGNORE_CASE 1
+
+#define strdup _strdup
+
+#define NO_CYGWIN 1 // WIN64 porting does not use CYGWIN
